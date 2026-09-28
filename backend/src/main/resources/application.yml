@@ -1,0 +1,35 @@
+server:
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/campusclaw?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC}
+    username: ${DB_USERNAME:campusclaw}
+    password: ${DB_PASSWORD:change-me}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+
+app:
+  material:
+    storage-dir: ${MATERIAL_STORAGE_DIR:./data/materials}
+  seed:
+    enabled: ${SEED_ENABLED:true}
+  cors:
+    allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}

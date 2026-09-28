@@ -1,0 +1,52 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: campusclaw
+      MYSQL_USER: campusclaw
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change-me}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-change-me-root}
+      TZ: Asia/Shanghai
+    volumes:
+      # 数据库数据持久化：重建容器后数据仍在
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD:-change-me-root}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://db:3306/campusclaw?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+      DB_USERNAME: campusclaw
+      DB_PASSWORD: ${DB_PASSWORD:-change-me}
+      MATERIAL_STORAGE_DIR: /app/data/materials
+      SEED_ENABLED: "true"
+      FRONTEND_ORIGIN: http://localhost
+    volumes:
+      # 材料文件持久化：重建容器后已上传材料仍在
+      - material-data:/app/data/materials
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  db-data:
+  material-data:
