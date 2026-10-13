@@ -3,8 +3,6 @@ package com.campusclaw.service;
 import com.campusclaw.dto.LoginRequest;
 import com.campusclaw.repository.UserRepository;
 import com.campusclaw.security.CampusUserPrincipal;
-import com.campusclaw.security.SessionAuthenticationFilter;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,7 +21,7 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public CampusUserPrincipal login(LoginRequest request, HttpSession session) {
+    public CampusUserPrincipal login(LoginRequest request) {
         var user = userRepository.findByUsername(request.username().trim())
                 .orElseThrow(this::badCredentials);
 
@@ -31,14 +29,7 @@ public class AuthService {
             throw badCredentials();
         }
 
-        session.setAttribute(SessionAuthenticationFilter.SESSION_USER_ID, user.getId());
         return CampusUserPrincipal.from(user);
-    }
-
-    public void logout(HttpSession session) {
-        if (session != null) {
-            session.invalidate();
-        }
     }
 
     private ResponseStatusException badCredentials() {

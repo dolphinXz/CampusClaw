@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-// 开发时通过代理把 /api 与 /health 转发到本地后端，登录 Cookie 天然同源。
+// 开发时通过代理把 /api 与 /health 转发到本地后端；认证经 Authorization 头携带，同源代理路径无需 Cookie。
 export default defineConfig({
   plugins: [vue()],
   cacheDir: '../.tmp/vite-cache',

@@ -12,14 +12,13 @@ import com.campusclaw.dto.LoginRequest;
 import com.campusclaw.repository.UserRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class AuthServiceTest {
 
     @Test
-    void loginStoresUserIdInSession() {
+    void loginReturnsPrincipal() {
         UserRepository userRepository = mock(UserRepository.class);
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         User user = new User("teacher-a", encoder.encode("Teacher@123"), "教师 A", UserRole.TEACHER, new ClassRoom("CLASS_A", "A 班"));
@@ -27,12 +26,11 @@ class AuthServiceTest {
         when(userRepository.findByUsername("teacher-a")).thenReturn(Optional.of(user));
 
         AuthService authService = new AuthService(userRepository, encoder);
-        MockHttpSession session = new MockHttpSession();
 
-        var principal = authService.login(new LoginRequest("teacher-a", "Teacher@123"), session);
+        var principal = authService.login(new LoginRequest("teacher-a", "Teacher@123"));
 
         assertThat(principal.getUsername()).isEqualTo("teacher-a");
-        assertThat(session.getAttribute("userId")).isEqualTo(1L);
+        assertThat(principal.getId()).isEqualTo(1L);
     }
 
     @Test
@@ -44,7 +42,7 @@ class AuthServiceTest {
 
         AuthService authService = new AuthService(userRepository, encoder);
 
-        assertThatThrownBy(() -> authService.login(new LoginRequest("teacher-a", "wrong"), new MockHttpSession()))
+        assertThatThrownBy(() -> authService.login(new LoginRequest("teacher-a", "wrong")))
                 .hasMessageContaining("账号或密码错误");
     }
 }

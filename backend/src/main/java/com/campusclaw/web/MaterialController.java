@@ -70,4 +70,22 @@ public class MaterialController {
                 .contentLength(bytes.length)
                 .body(bytes);
     }
+
+    /** 教师显式重建索引：先删旧切片与旧向量，再按本次策略生成新索引。 */
+    @PostMapping("/{id}/reindex")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ReindexResponse reindex(
+            @PathVariable Long id,
+            @RequestParam(value = "strategy", required = false) String strategy,
+            @RequestParam(value = "maxChars", required = false) Integer maxChars,
+            @RequestParam(value = "overlapPercent", required = false) Integer overlapPercent,
+            Authentication authentication
+    ) {
+        var summary = materialService.rebuild(id, authentication, strategy, maxChars, overlapPercent);
+        return new ReindexResponse(
+                summary.materialId(), summary.total(), summary.ready(), summary.failed());
+    }
+
+    public record ReindexResponse(Long materialId, int total, long ready, long failed) {
+    }
 }

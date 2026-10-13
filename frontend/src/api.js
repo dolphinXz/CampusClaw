@@ -1,3 +1,5 @@
+import { clearToken, getToken } from './token.js'
+
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
 
 class ApiError extends Error {
@@ -8,11 +10,19 @@ class ApiError extends Error {
 }
 
 async function request(path, options = {}) {
+  const token = getToken()
   const response = await fetch(path, {
-    credentials: 'include',
     ...options,
-    headers: { ...options.headers },
+    headers: {
+      ...options.headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   })
+
+  if (response.status === 401 && token && !path.startsWith('/api/auth/login')) {
+    // token 过期/失效：清除并广播（登录接口的 401 属凭据错误，由登录页展示）
+    clearToken()
+  }
 
   if (response.status === 204) {
     return null
@@ -58,6 +68,22 @@ export const api = {
       form.append('description', description)
     }
     return request('/api/materials', { method: 'POST', body: form })
+  },
+
+  retrieval({ query, mode, topK }) {
+    return request('/api/retrieval', {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ query, mode, topK }),
+    })
+  },
+
+  ask({ question, history }) {
+    return request('/api/ask', {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ question, history }),
+    })
   },
 }
 

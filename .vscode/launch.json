@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "CampusClawApplication",
+            "request": "launch",
+            "mainClass": "com.campusclaw.CampusClawApplication",
+            "env": {
+                // 本地开发用 JWT 密钥（≥32 字节占位）；生产/Compose 必须换真密钥，见 .env.example
+                "JWT_SECRET": "campusclaw-local-dev-secret-0123456789abcdef"
+            }
+        }
+    ]
+}

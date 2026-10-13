@@ -1,6 +1,7 @@
 package com.campusclaw.service;
 
 import com.campusclaw.domain.Material;
+import com.campusclaw.domain.ChunkStrategy;
 import com.campusclaw.domain.UserRole;
 import com.campusclaw.dto.MaterialResponse;
 import com.campusclaw.repository.MaterialRepository;
@@ -25,17 +26,20 @@ public class MaterialService {
     private final UserRepository userRepository;
     private final MaterialStorageService storageService;
     private final MaterialParserService parserService;
+    private final IndexingService indexingService;
 
     public MaterialService(
             MaterialRepository materialRepository,
             UserRepository userRepository,
             MaterialStorageService storageService,
-            MaterialParserService parserService
+            MaterialParserService parserService,
+            IndexingService indexingService
     ) {
         this.materialRepository = materialRepository;
         this.userRepository = userRepository;
         this.storageService = storageService;
         this.parserService = parserService;
+        this.indexingService = indexingService;
     }
 
     @Transactional(readOnly = true)
@@ -90,7 +94,54 @@ public class MaterialService {
                 previewText
         );
 
-        return MaterialResponse.from(materialRepository.save(material));
+        Material saved = materialRepository.save(material);
+        // 索引在材料事务提交后执行（REQUIRES_NEW 独立事务需读到已提交的材料行）。
+        // 切分/嵌入/Qdrant 失败只置切片 failed，不影响上传成功响应。
+        Long materialId = saved.getId();
+        Long classId = principal.getClassId();
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            indexingService.indexMaterial(materialId, classId);
+                        } catch (RuntimeException e) {
+                            // 索引失败不回滚材料，切片状态由流水线如实记录
+                        }
+                    }
+                });
+        return MaterialResponse.from(saved);
+    }
+
+    /** 教师显式重建索引：先删旧切片与旧向量，再按本次策略生成新索引。 */
+    public IndexingService.IndexSummary rebuild(
+            Long materialId,
+            Authentication authentication,
+            String strategy,
+            Integer maxChars,
+            Integer overlapPercent
+    ) {
+        CampusUserPrincipal principal = SecurityUtils.currentPrincipal(authentication);
+        if (principal.getRole() != UserRole.TEACHER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "只有教师可以管理索引");
+        }
+        // findAuthorized 同时校验存在性与班级归属（跨班与不存在均 404/403 延续既有规则）
+        findAuthorized(materialId, authentication);
+
+        ChunkStrategy chunkStrategy = ChunkStrategy.from(strategy);
+        ChunkingService.CustomParams params = null;
+        if (chunkStrategy == ChunkStrategy.CUSTOM && (maxChars != null || overlapPercent != null)) {
+            params = new ChunkingService.CustomParams(
+                    maxChars == null ? ChunkingService.AUTO_MAX_CHARS : maxChars,
+                    overlapPercent == null ? 0 : overlapPercent
+            );
+        }
+        try {
+            indexingService.rebuild(materialId, principal.getClassId(), chunkStrategy, params);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+        return indexingService.summary(materialId, principal.getClassId());
     }
 
     @Transactional(readOnly = true)

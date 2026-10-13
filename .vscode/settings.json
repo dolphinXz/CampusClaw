@@ -1,0 +1,8 @@
+{
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.configuration.updateBuildConfiguration": "automatic",
+    // 本地开发用 JWT 密钥（≥32 字节占位，仅注入集成终端；生产/Compose 必须用真密钥，见 .env.example）
+    "terminal.integrated.env.windows": {
+        "JWT_SECRET": "campusclaw-local-dev-secret-0123456789abcdef"
+    }
+}

@@ -8,11 +8,25 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD:-change-me}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-change-me-root}
       TZ: Asia/Shanghai
+    # 中文全文索引：ngram token 长度为 2
+    command: ["--ngram-token-size=2"]
     volumes:
       # 数据库数据持久化：重建容器后数据仍在
       - db-data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD:-change-me-root}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    volumes:
+      # 向量数据持久化：重建容器后索引仍在
+      - qdrant-data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/6333'"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -23,6 +37,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      qdrant:
+        condition: service_started
     environment:
       DB_URL: jdbc:mysql://db:3306/campusclaw?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
       DB_USERNAME: campusclaw
@@ -30,6 +46,19 @@ services:
       MATERIAL_STORAGE_DIR: /app/data/materials
       SEED_ENABLED: "true"
       FRONTEND_ORIGIN: http://localhost
+      # JWT 签名密钥：未设置时 compose 直接拒绝启动（fail-fast，不给默认值）
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set (>=32 bytes, see .env.example)}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-720}
+      # 检索与问答（只在服务端，浏览器不可见）
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: campusclaw_chunks
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      EMBEDDING_DIM: ${EMBEDDING_DIM:-1536}
+      CHAT_BASE_URL: ${CHAT_BASE_URL:-}
+      CHAT_API_KEY: ${CHAT_API_KEY:-}
+      CHAT_MODEL: ${CHAT_MODEL:-gpt-4o-mini}
     volumes:
       # 材料文件持久化：重建容器后已上传材料仍在
       - material-data:/app/data/materials
@@ -50,3 +79,4 @@ services:
 volumes:
   db-data:
   material-data:
+  qdrant-data:

@@ -1,10 +1,5 @@
 server:
   port: 8080
-  servlet:
-    session:
-      cookie:
-        http-only: true
-        same-site: lax
 
 spring:
   datasource:
@@ -33,3 +28,20 @@ app:
     enabled: ${SEED_ENABLED:true}
   cors:
     allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+  auth:
+    # JWT 签名密钥：必须 ≥32 字节，缺失或过短时应用启动失败（JwtService 构造校验）
+    jwt-secret: ${JWT_SECRET:}
+    jwt-expiration-minutes: ${JWT_EXPIRATION_MINUTES:720}
+  retrieval:
+    # Qdrant 只保存向量与关联编号，不保存正文；浏览器不得直接访问
+    qdrant-url: ${QDRANT_URL:http://localhost:6333}
+    qdrant-collection: ${QDRANT_COLLECTION:campusclaw_chunks}
+    # 嵌入网关（OpenAI 兼容 /embeddings），只在服务端调用
+    embedding-base-url: ${EMBEDDING_BASE_URL:}
+    embedding-api-key: ${EMBEDDING_API_KEY:}
+    embedding-model: ${EMBEDDING_MODEL:text-embedding-3-small}
+    embedding-dim: ${EMBEDDING_DIM:1536}
+    # 对话网关（OpenAI 兼容 /chat/completions），只在服务端调用
+    chat-base-url: ${CHAT_BASE_URL:}
+    chat-api-key: ${CHAT_API_KEY:}
+    chat-model: ${CHAT_MODEL:gpt-4o-mini}

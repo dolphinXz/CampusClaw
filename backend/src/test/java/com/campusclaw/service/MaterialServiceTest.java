@@ -35,7 +35,8 @@ class MaterialServiceTest {
                 materialRepository,
                 userRepository,
                 storageService,
-                parserService
+                parserService,
+                mock(IndexingService.class)
         );
         CampusUserPrincipal principal = CampusUserPrincipal.from(studentA1);
         var authentication = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
@@ -81,7 +82,8 @@ class MaterialServiceTest {
                 materialRepository,
                 userRepository,
                 storageService,
-                parserService
+                parserService,
+                mock(IndexingService.class)
         );
         CampusUserPrincipal principal = CampusUserPrincipal.from(teacherA);
         var authentication = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());

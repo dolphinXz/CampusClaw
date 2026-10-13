@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { authState, logout } from './auth.js'
 import { pushToast } from './toast.js'
@@ -9,7 +9,21 @@ import ToastHost from './components/ToastHost.vue'
 
 const router = useRouter()
 
-const isAuthed = computed(() => authState.status === 'authenticated')
+const isAuthed = () => authState.status === 'authenticated'
+
+// token 失效（401）统一处理：token.js 清除 token 后广播，这里重置登录态并引导回登录页。
+// 用 window 事件解耦 api ↔ router 的循环依赖；在 setup 中注册，早于任何网络请求返回。
+function onUnauthorized() {
+  authState.user = null
+  authState.status = 'anonymous'
+  const route = router.currentRoute.value
+  if (route.meta.requiresAuth && route.name !== 'login') {
+    router.push({ name: 'login', query: { redirect: route.fullPath } })
+  }
+}
+
+window.addEventListener('campusclaw:unauthorized', onUnauthorized)
+onBeforeUnmount(() => window.removeEventListener('campusclaw:unauthorized', onUnauthorized))
 
 async function onLogout() {
   await logout()
@@ -20,10 +34,10 @@ async function onLogout() {
 
 <template>
   <!-- 单一 router-view：布局由外壳元素控制，避免双 router-view 与过渡动画互相干扰 -->
-  <div class="app-root" :class="{ 'with-sidebar': isAuthed }">
-    <AppSidebar v-if="isAuthed" @logout="onLogout" />
+  <div class="app-root" :class="{ 'with-sidebar': isAuthed() }">
+    <AppSidebar v-if="isAuthed()" @logout="onLogout" />
     <div class="main">
-      <header v-if="isAuthed" class="topbar">
+      <header v-if="isAuthed()" class="topbar">
         <nav class="breadcrumb">
           <span>工作空间</span>
           <span class="sep">/</span>
@@ -71,7 +85,7 @@ async function onLogout() {
         </router-view>
       </div>
 
-      <footer v-if="isAuthed" class="page-foot">
+      <footer v-if="isAuthed()" class="page-foot">
         <span>CampusClaw · 班级教研空间</span>
         <span>数据范围：{{ authState.user?.className }}</span>
       </footer>

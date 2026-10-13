@@ -969,6 +969,205 @@ a {
   gap: 8px;
 }
 
+/* ============ 检索与问答 ============ */
+.retrieval-card {
+  margin-bottom: 22px;
+}
+
+.mode-picker {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  margin-bottom: 14px;
+}
+
+.mode-option {
+  padding: 7px 18px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s var(--ease);
+}
+
+.mode-option:hover {
+  color: var(--ink);
+}
+
+.mode-option.active {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(143, 34, 51, 0.25);
+}
+
+.ask-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ask-input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ask-input::placeholder {
+  color: var(--muted);
+}
+
+.ask-input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: var(--ring);
+}
+
+.hit-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.hit-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  background: var(--surface-2);
+  transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+
+.hit-card:hover {
+  border-color: var(--brand-soft-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.hit-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.hit-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.hit-excerpt {
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+
+.hit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hit-meta .sep {
+  opacity: 0.55;
+}
+
+.hit-open {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--brand-strong);
+  font-weight: 600;
+}
+
+.hit-open:hover {
+  text-decoration: underline;
+}
+
+.answer-box {
+  border: 1px solid var(--brand-soft-strong);
+  border-radius: var(--radius);
+  background: var(--brand-soft);
+  padding: 18px 20px;
+}
+
+.answer-text {
+  margin: 0 0 14px;
+  font-size: 14.5px;
+  line-height: 1.8;
+  color: var(--ink);
+}
+
+.citation-label {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--brand-strong);
+}
+
+.citation-list {
+  border-top: 1px dashed var(--brand-soft-strong);
+  padding-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.citation-item {
+  display: flex;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+
+.citation-num {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--brand);
+  flex: none;
+  padding-top: 1px;
+}
+
+.citation-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.citation-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.citation-head .hit-open {
+  font-size: 12px;
+}
+
+.citation-item .hit-excerpt {
+  margin: 0;
+  font-size: 12.5px;
+}
+
 /* ============ 表单 ============ */
 .field {
   display: block;

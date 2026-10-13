@@ -1,9 +1,10 @@
 package com.campusclaw.config;
 
 import com.campusclaw.repository.UserRepository;
+import com.campusclaw.security.JwtAuthenticationFilter;
+import com.campusclaw.security.JwtService;
 import com.campusclaw.security.RestAccessDeniedHandler;
 import com.campusclaw.security.RestAuthenticationEntryPoint;
-import com.campusclaw.security.SessionAuthenticationFilter;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -33,11 +34,16 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, UserRepository userRepository) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtService jwtService,
+            UserRepository userRepository
+    ) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                // 无状态认证：不创建 HttpSession，凭据只经 Authorization 头携带
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/health", "/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/logout").permitAll()
@@ -47,7 +53,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(new RestAuthenticationEntryPoint())
                         .accessDeniedHandler(new RestAccessDeniedHandler())
                 )
-                .addFilterBefore(new SessionAuthenticationFilter(userRepository), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationFilter(jwtService, userRepository), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -60,7 +66,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of(allowedOrigin));
         configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Content-Type", "Authorization"));
-        configuration.setAllowCredentials(true);
+        // token 经 Authorization 头携带，不依赖 Cookie 凭据
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
