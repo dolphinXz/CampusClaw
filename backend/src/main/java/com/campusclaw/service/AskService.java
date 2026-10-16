@@ -64,7 +64,8 @@ public class AskService {
                     hit.materialTitle(),
                     hit.chunk().getId(),
                     hit.chunk().getChunkIndex(),
-                    excerpt(hit.chunk().getChunkText())
+                    excerpt(hit.chunk().getChunkText()),
+                    i + 1
             ));
             context.append('[').append(i + 1).append("] 《").append(hit.materialTitle())
                     .append("》切片 #").append(hit.chunk().getChunkIndex())

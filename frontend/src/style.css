@@ -1028,6 +1028,32 @@ a {
   color: var(--muted);
 }
 
+/* 下拉选择：与 .ask-input 同一套边框/圆角/焦点风格，去掉系统原生外观 */
+.field-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 11px 36px 11px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23a2958c' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.field-select:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: var(--ring);
+}
+.field-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .ask-input:focus {
   outline: none;
   border-color: var(--brand);

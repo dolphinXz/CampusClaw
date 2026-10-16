@@ -46,6 +46,28 @@ public interface KnowledgeChunkRepository extends JpaRepository<KnowledgeChunk, 
             @Param("limit") int limit
     );
 
+    /** 智能体限定检索：额外限定材料白名单（绑定材料集合）。 */
+    @Query(
+            value = """
+                    select c.id, match(c.chunk_text) against (:query in natural language mode) as relevance
+                    from knowledge_chunks c
+                    where c.class_id = :classId
+                      and c.index_status = 'READY'
+                      and c.material_id in (:materialIds)
+                      and match(c.chunk_text) against (:query in natural language mode) > :minRelevance
+                    order by relevance desc
+                    limit :limit
+                    """,
+            nativeQuery = true
+    )
+    List<KeywordMatch> searchKeywordInMaterials(
+            @Param("query") String query,
+            @Param("classId") Long classId,
+            @Param("minRelevance") double minRelevance,
+            @Param("limit") int limit,
+            @Param("materialIds") Collection<Long> materialIds
+    );
+
     interface KeywordMatch {
         Long getId();
 

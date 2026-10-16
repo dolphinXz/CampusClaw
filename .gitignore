@@ -3,6 +3,16 @@ backend/target/
 frontend/dist/
 .tmp/
 
+# 接口测试报告与运行产物（不入库）
+apitest/reports/
+apitest/sse-body.json
+apitest/sse-tmp.txt
+__pycache__/
+*.pyc
+
+# 后端本地运行日志
+backend/*.log
+
 # 依赖
 frontend/node_modules/
 

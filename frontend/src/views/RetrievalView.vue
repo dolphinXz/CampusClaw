@@ -16,6 +16,15 @@ const asking = ref(false)
 const askError = ref('')
 const askResult = ref(null) // { answer, basis, citations }
 
+// 带认证打开原材料（浏览器直跳 /content 带不上 Authorization 头会 401）
+async function openMaterial(materialId) {
+  try {
+    await api.openMaterial(materialId)
+  } catch {
+    pushToast('打开原材料失败', 'error')
+  }
+}
+
 const modeOptions = [
   { value: 'keyword', label: '关键字', hint: '只查全文索引，不依赖向量库' },
   { value: 'vector', label: '向量', hint: '语义改写也能命中' },
@@ -150,7 +159,7 @@ function scoreText(score) {
           <span>字符 {{ hit.charRange.start }}–{{ hit.charRange.end }}</span>
           <span class="sep">·</span>
           <span>{{ scoreText(hit.score) }}</span>
-          <a class="hit-open" :href="hit.openUrl" title="打开原材料">
+          <a class="hit-open" href="#" title="打开原材料" @click.prevent="openMaterial(hit.materialId)">
             打开原材料
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                  stroke-linecap="round" stroke-linejoin="round">
@@ -202,7 +211,7 @@ function scoreText(score) {
             <div class="citation-head">
               <span class="hit-title">{{ citation.materialTitle }}</span>
               <span class="muted" style="font-size: 12px">切片 #{{ citation.chunkIndex }}</span>
-              <a class="hit-open" :href="`/api/materials/${citation.materialId}/content`" title="打开原材料">
+              <a class="hit-open" href="#" title="打开原材料" @click.prevent="openMaterial(citation.materialId)">
                 打开原材料
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round">

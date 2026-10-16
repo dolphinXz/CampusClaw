@@ -237,6 +237,59 @@ class RetrievalServiceTest {
     }
 
     @Test
+    void emptyMaterialWhitelistReturnsEmptyWithoutTouchingDependencies() {
+        // 空绑定 → 直接无检索，不回退全班、不触碰嵌入与 Qdrant
+        List<RetrievalService.Scored> hits = service.topHitsInMaterials("分数", 4, CLASS_A, List.of());
+
+        assertThat(hits).isEmpty();
+        verify(embeddingClient, never()).embed(any());
+        verify(qdrantClient, never()).search(any(), anyLong(), anyInt(), anyDouble());
+        verify(chunkRepository, never()).searchKeyword(any(), anyLong(), anyDouble(), anyInt());
+        verify(chunkRepository, never()).searchKeywordInMaterials(any(), anyLong(), anyDouble(), anyInt(), anyCollection());
+    }
+
+    @Test
+    void whitelistRoutesKeywordQueryToInMaterialsSearch() {
+        // 限定材料时 keyword 走白名单 SQL，普通全班查询不被触发
+        KnowledgeChunk chunk = chunk(1L, 10L, CLASS_A, 0);
+        KnowledgeChunkRepository.KeywordMatch m1 = match(1L, 3.5);
+        when(chunkRepository.searchKeywordInMaterials(
+                eq("分数"), eq(CLASS_A), anyDouble(), anyInt(), anyCollection()))
+                .thenReturn(List.of(m1));
+        when(chunkRepository.findByIdInAndClassIdAndIndexStatus(anyCollection(), eq(CLASS_A), eq(ChunkIndexStatus.READY)))
+                .thenReturn(List.of(chunk));
+        when(materialRepository.findById(10L)).thenReturn(Optional.of(chunk.getKnowledgeEntry().getMaterial()));
+
+        List<RetrievalService.Scored> hits = service.topHitsInMaterials("分数", 4, CLASS_A, List.of(10L));
+
+        assertThat(hits).hasSize(1);
+        assertThat(hits.get(0).chunk().getMaterialId()).isEqualTo(10L);
+        verify(chunkRepository, never()).searchKeyword(any(), anyLong(), anyDouble(), anyInt());
+    }
+
+    @Test
+    void whitelistFiltersVectorBackTableHits() {
+        // Qdrant 返回的切片回表白名单校验：不在白名单的丢弃
+        KnowledgeChunk inList = chunk(1L, 10L, CLASS_A, 0);
+        KnowledgeChunk notInList = chunk(2L, 11L, CLASS_A, 0);
+        when(embeddingClient.embed(any())).thenReturn(new float[]{1f});
+        when(qdrantClient.search(any(), eq(CLASS_A), anyInt(), eq(RetrievalService.COSINE_THRESHOLD)))
+                .thenReturn(List.of(
+                        new QdrantClient.ScoredPoint(1L, 0.9),
+                        new QdrantClient.ScoredPoint(2L, 0.8)));
+        // 回表按班级返回两片，服务端再按白名单过滤掉 11 号材料
+        when(chunkRepository.findByIdInAndClassIdAndIndexStatus(anyCollection(), eq(CLASS_A), eq(ChunkIndexStatus.READY)))
+                .thenReturn(List.of(inList, notInList));
+        when(materialRepository.findById(10L)).thenReturn(Optional.of(inList.getKnowledgeEntry().getMaterial()));
+        when(materialRepository.findById(11L)).thenReturn(Optional.of(notInList.getKnowledgeEntry().getMaterial()));
+
+        List<RetrievalService.Scored> hits = service.topHitsInMaterials("同义改写", 4, CLASS_A, List.of(10L));
+
+        assertThat(hits).hasSize(1);
+        assertThat(hits.get(0).chunk().getMaterialId()).isEqualTo(10L);
+    }
+
+    @Test
     void rejectsUnknownMode() {
         assertThatThrownBy(() -> service.search("查询", "magic", null, CLASS_A))
                 .isInstanceOf(ResponseStatusException.class)

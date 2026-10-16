@@ -12,6 +12,7 @@ import com.campusclaw.repository.KnowledgeChunkRepository;
 import com.campusclaw.repository.KnowledgeChunkRepository.KeywordMatch;
 import com.campusclaw.repository.MaterialRepository;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -83,9 +84,9 @@ public class RetrievalService {
         List<Scored> candidates;
         try {
             candidates = switch (effectiveMode) {
-                case MODE_KEYWORD -> keywordPath(query, classId, limit);
-                case MODE_VECTOR -> vectorPath(query, classId, limit);
-                case MODE_HYBRID -> hybridPath(query, classId, limit);
+                case MODE_KEYWORD -> keywordPath(query, classId, limit, null);
+                case MODE_VECTOR -> vectorPath(query, classId, limit, null);
+                case MODE_HYBRID -> hybridPath(query, classId, limit, null);
                 default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "未知检索模式");
             };
         } catch (GatewayException e) {
@@ -120,15 +121,28 @@ public class RetrievalService {
 
     /** hybrid 取前 n 条（/api/ask 复用同一检索方式取前 4 条）。 */
     public List<Scored> topHits(String query, int n, Long classId) {
-        List<Scored> all = hybridPath(query.trim(), classId, Math.max(n, 1));
+        List<Scored> all = hybridPath(query.trim(), classId, Math.max(n, 1), null);
+        return all.size() <= n ? all : all.subList(0, n);
+    }
+
+    /**
+     * 智能体限定检索：候选额外限定为绑定材料白名单；白名单为空集合直接返回空（不回退全班）。
+     */
+    public List<Scored> topHitsInMaterials(String query, int n, Long classId, Collection<Long> materialIds) {
+        if (materialIds == null || materialIds.isEmpty()) {
+            return List.of();
+        }
+        List<Scored> all = hybridPath(query.trim(), classId, Math.max(n, 1), materialIds);
         return all.size() <= n ? all : all.subList(0, n);
     }
 
     // ---------- 三条路径 ----------
 
-    private List<Scored> keywordPath(String query, Long classId, int limit) {
-        List<KeywordMatch> matches = chunkRepository.searchKeyword(
-                query, classId, KEYWORD_MIN_RELEVANCE, limit);
+    private List<Scored> keywordPath(String query, Long classId, int limit, Collection<Long> materialIds) {
+        List<KeywordMatch> matches = materialIds == null
+                ? chunkRepository.searchKeyword(query, classId, KEYWORD_MIN_RELEVANCE, limit)
+                : chunkRepository.searchKeywordInMaterials(
+                        query, classId, KEYWORD_MIN_RELEVANCE, limit, materialIds);
         if (matches.isEmpty()) {
             return List.of();
         }
@@ -145,10 +159,12 @@ public class RetrievalService {
                 .toList();
     }
 
-    private List<Scored> vectorPath(String query, Long classId, int limit) {
+    private List<Scored> vectorPath(String query, Long classId, int limit, Collection<Long> materialIds) {
         float[] vector = embed(query);           // 嵌入失败 → 503
+        // 限定材料时多取一些候选，回表白名单过滤后仍能凑够 limit
+        int fetchLimit = materialIds == null ? limit : Math.max(limit, limit * 3);
         List<QdrantClient.ScoredPoint> points = qdrantClient.search(   // Qdrant 不可用 → 503
-                vector, classId, limit, COSINE_THRESHOLD);
+                vector, classId, fetchLimit, COSINE_THRESHOLD);
 
         Map<Long, Double> cosineById = new LinkedHashMap<>();
         for (QdrantClient.ScoredPoint point : points) {
@@ -163,16 +179,17 @@ public class RetrievalService {
         List<KnowledgeChunk> chunks = loadReadyChunks(cosineById.keySet(), classId);
         return chunks.stream()
                 .filter(c -> cosineById.containsKey(c.getId())) // 只保留该路命中的切片
+                .filter(c -> materialIds == null || materialIds.contains(c.getMaterialId()))
                 .map(c -> Scored.vector(c, cosineById.get(c.getId()), titleOf(c)))
                 .sorted(Comparator.comparingDouble((Scored s) -> s.cosineScore()).reversed())
                 .limit(limit)
                 .toList();
     }
 
-    private List<Scored> hybridPath(String query, Long classId, int limit) {
+    private List<Scored> hybridPath(String query, Long classId, int limit, Collection<Long> materialIds) {
         List<Scored> keyword;
         try {
-            keyword = keywordPath(query, classId, limit);
+            keyword = keywordPath(query, classId, limit, materialIds);
         } catch (RuntimeException e) {
             // 关键字路径只有数据库故障才会异常，沿用 503 语义
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "检索服务暂不可用");
@@ -180,7 +197,7 @@ public class RetrievalService {
 
         List<Scored> vector;
         try {
-            vector = vectorPath(query, classId, limit);
+            vector = vectorPath(query, classId, limit, materialIds);
         } catch (GatewayException e) {
             // 向量路依赖故障（嵌入或 Qdrant 不可用）→ 503，不降级为纯关键字
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "检索服务暂不可用");

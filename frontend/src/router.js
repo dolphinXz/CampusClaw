@@ -3,6 +3,8 @@ import { authState, fetchMe } from './auth.js'
 import LoginView from './views/LoginView.vue'
 import MaterialsView from './views/MaterialsView.vue'
 import RetrievalView from './views/RetrievalView.vue'
+import AssistantView from './views/AssistantView.vue'
+import AssistantConfigView from './views/AssistantConfigView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -10,6 +12,14 @@ const router = createRouter({
     { path: '/login', name: 'login', component: LoginView },
     { path: '/', name: 'materials', component: MaterialsView, meta: { requiresAuth: true } },
     { path: '/retrieval', name: 'retrieval', component: RetrievalView, meta: { requiresAuth: true } },
+    { path: '/assistant', name: 'assistant', component: AssistantView, meta: { requiresAuth: true } },
+    // 助手配置仅教师可进（路由守卫 + 接口 403 双重校验）
+    {
+      path: '/assistant-config',
+      name: 'assistant-config',
+      component: AssistantConfigView,
+      meta: { requiresAuth: true, teacherOnly: true },
+    },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
@@ -21,6 +31,9 @@ router.beforeEach(async (to) => {
   }
   if (to.meta.requiresAuth && authState.status !== 'authenticated') {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  if (to.meta.teacherOnly && authState.user?.role !== 'TEACHER') {
+    return { name: 'materials' }
   }
   if (to.name === 'login' && authState.status === 'authenticated') {
     return { name: 'materials' }

@@ -6,6 +6,8 @@ import com.campusclaw.dto.UserResponse;
 import com.campusclaw.security.JwtService;
 import com.campusclaw.security.SecurityUtils;
 import com.campusclaw.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "认证", description = "登录签发 JWT；登出为客户端丢弃 token（服务端无状态）")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -28,6 +31,7 @@ public class AuthController {
         this.jwtService = jwtService;
     }
 
+    @Operation(summary = "登录", description = "有效凭据返回 token 与用户信息；无效凭据 401。免认证。")
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         var principal = authService.login(request);
@@ -46,6 +50,7 @@ public class AuthController {
         // no-op
     }
 
+    @Operation(summary = "当前用户", description = "需 Bearer 令牌；返回用户名、角色与班级。")
     @GetMapping("/me")
     public UserResponse me(Authentication authentication) {
         return UserResponse.from(SecurityUtils.currentPrincipal(authentication));

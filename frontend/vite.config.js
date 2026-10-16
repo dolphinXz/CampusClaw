@@ -10,6 +10,9 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:8080',
       '/health': 'http://localhost:8080',
+      // Swagger UI 与 OpenAPI 描述（SSE 由 vite 默认流式透传）
+      '/swagger-ui': 'http://localhost:8080',
+      '/v3/api-docs': 'http://localhost:8080',
     },
   },
 })
